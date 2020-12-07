@@ -17,15 +17,16 @@ Content-Type: application/json
 
 ###
 
-PUT http://localhost:8080/api/employees/3
+PUT http://localhost:8080/api/employees/1
 Content-Type: application/json
 
 {
-  "name": "Jane Jane Doe"
+  "name": "John 3 Doe"
+
 }
 
 ###
 
-DELETE http://localhost:8080/api/employees/3
+DELETE http://localhost:8080/api/employees/1
 
 

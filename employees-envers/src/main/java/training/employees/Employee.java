@@ -2,6 +2,8 @@ package training.employees;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.envers.Audited;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -15,7 +17,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @Table(name = "employees")
-@EntityListeners(AuditingEntityListener.class)
+@Audited
 public class Employee {
 
     @Id
@@ -24,20 +26,6 @@ public class Employee {
 
     @Column(name = "emp_name")
     private String name;
-
-    @CreatedDate
-    private LocalDateTime createdAt;
-
-    @LastModifiedDate
-    private LocalDateTime lastModifiedAt;
-
-    @CreatedBy
-    private String createdBy;
-
-    @LastModifiedBy
-    private String lastModifiedBy;
-
-
 
     public Employee(String name) {
         this.name = name;
