@@ -1,0 +1,44 @@
+GET http://localhost:8080/api/employees
+Accept: application/json
+
+###
+
+GET http://localhost:8080/api/employees/1
+Accept: application/json
+
+###
+
+GET http://localhost:8080/api/employees/1
+Accept: application/json
+If-None-Match: "3"
+
+###
+
+POST http://localhost:8080/api/employees/
+Content-Type: application/json
+
+{
+  "name": "Jane Doe"
+}
+
+###
+
+PUT http://localhost:8080/api/employees/1
+Content-Type: application/json
+
+{
+  "name": "John 4 Doe"
+}
+
+###
+
+DELETE http://localhost:8080/api/employees/1
+
+###
+GET http://localhost:8080/actuator/info
+
+
+###
+GET http://localhost:8080/actuator/metrics/cache.gets
+
+
