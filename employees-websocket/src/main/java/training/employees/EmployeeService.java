@@ -4,12 +4,14 @@ import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.actuate.audit.listener.AuditApplicationEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.lang.reflect.Type;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @AllArgsConstructor
@@ -37,6 +39,7 @@ public class EmployeeService {
         var employee = new Employee(command.getName());
         employeeRepository.save(employee);
         publisher.publishEvent(new EmployeeHasCreatedEvent(command.getName()));
+        publisher.publishEvent(new AuditApplicationEvent("training", "EMPLOYEE_HAS_CREATED", Map.of("name", command.getName())));
         return modelMapper.map(employee, EmployeeDto.class);
     }
 
