@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,8 @@ public class EmployeeService {
     private final EmployeeRepository employeeRepository;
 
     private final ModelMapper modelMapper;
+
+    private final ApplicationEventPublisher publisher;
 
     public List<EmployeeDto> findAll() {
         var employees = employeeRepository.findAll();
@@ -33,6 +36,7 @@ public class EmployeeService {
     public EmployeeDto create(CreateEmployeeCommand command) {
         var employee = new Employee(command.getName());
         employeeRepository.save(employee);
+        publisher.publishEvent(new EmployeeHasCreatedEvent("Employee has been created: " + command.getName()));
         return modelMapper.map(employee, EmployeeDto.class);
     }
 
