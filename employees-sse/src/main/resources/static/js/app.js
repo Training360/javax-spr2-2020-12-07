@@ -7,7 +7,7 @@ window.onload = function() {
     //     });
 
     const evtSource = new EventSource("api/events");
-    evtSource.addEventListener("message",
+    evtSource.addEventListener("event",
         function(event) {
             console.log(event);
             print(JSON.parse(event.data).text);
