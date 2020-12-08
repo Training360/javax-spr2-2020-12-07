@@ -13,6 +13,7 @@ import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 
 @SpringBootApplication
 public class EmployeesWsClientApplication implements CommandLineRunner {
@@ -30,7 +31,13 @@ public class EmployeesWsClientApplication implements CommandLineRunner {
 		WebSocketStompClient stompClient = new WebSocketStompClient(client);
 		stompClient.setMessageConverter(new MappingJackson2MessageConverter());
 		StompSessionHandler sessionHandler = new MessageStompSessionHandler();
-		stompClient.connect("ws://localhost:8080/websocket-endpoint", sessionHandler);
-		new Scanner(System.in).nextLine();
+		var future = stompClient.connect("ws://localhost:8080/websocket-endpoint", sessionHandler);
+		var session = future.get(5, TimeUnit.SECONDS);
+		var scanner = new Scanner(System.in);
+		String line = null;
+		while (!"exit".equals(line)) {
+			line = scanner.nextLine();
+			session.send("/app/messages", new MessageCommand(line));
+		}
 	}
 }
