@@ -1211,15 +1211,6 @@ public class MessageStompSessionHandler implements StompSessionHandler {
         stompSession.subscribe("/topic/employees", this);
     }
 
-    public void handleException(StompSession stompSession, StompCommand stompCommand,
-          StompHeaders stompHeaders, byte[] bytes, Throwable throwable) {
-        throw new IllegalStateException("Exception by websocket communication", throwable);
-    }
-
-    public void handleTransportError(StompSession stompSession, Throwable throwable) {
-        throw new IllegalStateException("Exception by websocket transport", throwable);
-    }
-
     public Type getPayloadType(StompHeaders stompHeaders) {
             return Message.class;
     }
@@ -1233,11 +1224,27 @@ public class MessageStompSessionHandler implements StompSessionHandler {
 
 ---
 
+## Hibakezelés
+
+```java
+public void handleException(StompSession stompSession, StompCommand stompCommand,
+      StompHeaders stompHeaders, byte[] bytes, Throwable throwable) {
+    throw new IllegalStateException("Exception by websocket communication", throwable);
+}
+
+public void handleTransportError(StompSession stompSession, Throwable throwable) {
+    throw new IllegalStateException("Exception by websocket transport", throwable);
+}
+```
+
+---
+
 ## Üzenet küldése
 
 
 ```java
-ListenableFuture<StompSession> future =  stompClient.connect("ws://localhost:8080/websocket-endpoint", sessionHandler);
+ListenableFuture<StompSession> future = 
+  stompClient.connect("ws://localhost:8080/websocket-endpoint", sessionHandler);
 StompSession session = future.get(1000, TimeUnit.SECONDS);
 // A MessageCommand JSON-be marshal-olható objektum
 session.send("/app/messages", new MessageCommand(line));
@@ -1454,17 +1461,15 @@ class: inverse, center, middle
 ## Link elhelyezése
 
 ```java
-@GetMapping("/{id}")
-public Resource<EmployeeDto> findEmployeeById(@PathVariable("id") long id) {
-    return new Resource<>(employeeService.findEmployeeById(id),
-            ControllerLinkBuilder.linkTo(
-                    ControllerLinkBuilder.methodOn(EmployeeController.class).findEmployeeById(id))
-                    .withSelfRel(),
-            ControllerLinkBuilder.linkTo(
-                    ControllerLinkBuilder.methodOn(EmployeeController.class).findEmployeeById(id))
-                    .slash("history")
-                    .withRel("history")
-            );
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
+```
+```java
+public EntityModel<EmployeeDto> findById(@PathVariable long id) {
+        EmployeeDto employeeDto = employeeService.findById(id);
+        EntityModel<EmployeeDto> entityModel = EntityModel.of(employeeDto);
+
+        entityModel.add(linkTo(methodOn(EmployeeController.class).findById(id)).withSelfRel());
+        return entityModel;
 }
 ```
 
@@ -1472,15 +1477,10 @@ public Resource<EmployeeDto> findEmployeeById(@PathVariable("id") long id) {
 
 ## ResourceSupport
 
-* Dto legyen a `ResourceSupport` leszármazottja
-* Már van `id` property-je
-
 ```java
-@JsonPropertyOrder({"id", "name", "addresses"})
-public class EmployeeDto extends ResourceSupport {
+public class EmployeeDto extends RepresentationModel<EmployeeDto> {
 
-    @JsonProperty("id")
-    private Long employeeId;
+    private Long id;
 
     private String name;
 
@@ -1490,29 +1490,52 @@ public class EmployeeDto extends ResourceSupport {
 
 ---
 
-## ResourceAssemblerSupport
+## Használata
 
 ```java
-public class EmployeeDtoResourceAssembler extends ResourceAssemblerSupport<Employee, EmployeeDto> {
+@GetMapping
+public CollectionModel<EmployeeDto> findAll() {
+    List<EmployeeDto> employees = employeeService.findAll();
+    for (EmployeeDto employee: employees) {
+        employee.add(linkTo(methodOn(EmployeeController.class).findById(employee.getId()))
+             .withSelfRel());
+    }
+    CollectionModel<EmployeeDto> collectionModel = CollectionModel.of(employees);
+    collectionModel.add(linkTo(methodOn(EmployeeController.class).findAll()).withSelfRel());
+    return collectionModel;
+}
 
-    public EmployeeDtoResourceAssembler() {
+@GetMapping("{id}")
+public EmployeeDto findById(@PathVariable long id) {
+    EmployeeDto employee = employeeService.findById(id);
+
+    employee.add(linkTo(methodOn(EmployeeController.class).findById(id)).withSelfRel());
+    return employee;
+}
+```
+
+---
+
+## RMAS
+
+```java
+@Component
+public class EmployeeDtoAssembler extends RepresentationModelAssemblerSupport<Employee, EmployeeDto> {
+
+    private final ModelMapper modelMapper;
+
+    public EmployeeDtoAssembler(ModelMapper modelMapper) {
         super(EmployeeController.class, EmployeeDto.class);
+        this.modelMapper = modelMapper;
     }
 
     @Override
-    protected EmployeeDto instantiateResource(Employee entity) {
-        EmployeeDto employeeDto = // Employee entitás alapján létrehozás
-        employeeDto.add(ControllerLinkBuilder.linkTo(
-                        ControllerLinkBuilder.methodOn(EmployeeController.class)
-                          .findEmployeeById(entity.getId()))
-                        .slash("history")
-                        .withRel("history"));
-        return employeeDto;
-    }
+    public EmployeeDto toModel(Employee entity) {
+        EmployeeDto model = modelMapper.map(entity, EmployeeDto.class);
 
-    @Override
-    public EmployeeDto toResource(Employee employee) {
-        return createResourceWithId(employee.getId(), employee);
+        model.add(linkTo(methodOn(EmployeeController.class).findById(model.getId())).withSelfRel());
+
+        return model;
     }
 }
 ```
@@ -1522,18 +1545,16 @@ public class EmployeeDtoResourceAssembler extends ResourceAssemblerSupport<Emplo
 ## Használata
 
 ```java
-public EmployeeDto findEmployeeById(long id) {
-    Employee employee = // ...
-    return new EmployeeDtoResourceAssembler().toResource(employee);
+public CollectionModel<EmployeeDto> findAll() {
+    var employees = employeeRepository.findAll();
+    return employeeDtoAssembler.toCollectionModel(employees);
 }
 
-public Resources<EmployeeDto> listEmployees() {
-        List<Employee> employees = // ...
-        Resources<EmployeeDto> resources =
-          new Resources(new EmployeeDtoResourceAssembler().toResources(employees));
-        resources.add(ControllerLinkBuilder.linkTo(EmployeeController.class).withSelfRel());
-        return resources;
-    }
+public EmployeeDto findById(long id) {
+    return employeeDtoAssembler.toModel(employeeRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Invalid id: " + id)))
+            .add(linkTo(methodOn(EmployeeController.class).findAll()).withSelfRel());
+}
 ```
 
 ---
