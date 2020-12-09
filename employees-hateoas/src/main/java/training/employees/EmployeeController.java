@@ -1,10 +1,14 @@
 package training.employees;
 
 import lombok.AllArgsConstructor;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 @RestController
 @RequestMapping("/api/employees")
@@ -14,13 +18,21 @@ public class EmployeeController {
     private final EmployeeService employeeService;
 
     @GetMapping
-    public List<EmployeeDto> findAll() {
-        return employeeService.findAll();
+    public CollectionModel<EmployeeDto> findAll() {
+        var employees = employeeService.findAll();
+        for (var employee: employees) {
+            employee.add(linkTo(methodOn(EmployeeController.class).findById(employee.getId())).withSelfRel());
+        }
+        var model = CollectionModel.of(employees);
+        model.add(linkTo(methodOn(EmployeeController.class).findAll()).withSelfRel());
+        return model;
     }
 
     @GetMapping("{id}")
     public EmployeeDto findById(@PathVariable long id) {
-        return employeeService.findById(id);
+        var employee = employeeService.findById(id);
+        employee.add(linkTo(methodOn(EmployeeController.class).findById(id)).withSelfRel());
+        return employee;
     }
 
     @PostMapping
