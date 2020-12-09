@@ -32,11 +32,15 @@ public class EmployeeService {
                 , EmployeeDto.class);
     }
 
+    @Transactional
     public EmployeeDto create(CreateEmployeeCommand command) {
         var employee = new Employee(command.getName());
         employeeRepository.save(employee);
         jmsGateway.sendMessage("Employee has created: " + command.getName());
-        return modelMapper.map(employee, EmployeeDto.class);
+
+        throw new IllegalArgumentException("Not created");
+
+        //return modelMapper.map(employee, EmployeeDto.class);
     }
 
     @Transactional
