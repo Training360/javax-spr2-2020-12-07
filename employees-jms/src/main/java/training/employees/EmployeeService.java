@@ -18,6 +18,8 @@ public class EmployeeService {
 
     private final ModelMapper modelMapper;
 
+    private final JmsGateway jmsGateway;
+
     public List<EmployeeDto> findAll() {
         var employees = employeeRepository.findAll();
         var targetListType = new TypeToken<List<EmployeeDto>>() {}.getType();
@@ -33,6 +35,7 @@ public class EmployeeService {
     public EmployeeDto create(CreateEmployeeCommand command) {
         var employee = new Employee(command.getName());
         employeeRepository.save(employee);
+        jmsGateway.sendMessage("Employee has created: " + command.getName());
         return modelMapper.map(employee, EmployeeDto.class);
     }
 
